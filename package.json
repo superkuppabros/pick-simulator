@@ -1,0 +1,18 @@
+{
+  "scripts": {
+    "format": "prettier --write ./src/**/*.ts"
+  },
+  "name": "pick-simulator",
+  "version": "1.0.0",
+  "description": "\"Shadowverse 2Pick simulator\"",
+  "main": "index.js",
+  "author": "SKB",
+  "license": "ISC",
+  "dependencies": {
+    "clasp": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/google-apps-script": "^1.0.7",
+    "prettier": "^1.19.1"
+  }
+}
