@@ -31,7 +31,6 @@ function displayCard() {
     leader,
     probAllList
   );
-  Logger.log(pickSet);
 
   const pick1Arr = [];
   const pick1CardArr = [pickSet.cardSet1.card1, pickSet.cardSet1.card2];
@@ -39,6 +38,7 @@ function displayCard() {
   pick1Arr.push(pick1CardArr.map(card => card.rarelity));
   pick1Arr.push(pick1CardArr.map(card => card.name));
   pick1Arr.push(pick1CardArr.map(card => calculateCardStats(card)));
+  pick1Arr.push(pick1CardArr.map(card => card.cost));
 
   const pick2Arr = [];
   const pick2CardArr = [pickSet.cardSet2.card1, pickSet.cardSet2.card2];
@@ -46,6 +46,7 @@ function displayCard() {
   pick2Arr.push(pick2CardArr.map(card => card.rarelity));
   pick2Arr.push(pick2CardArr.map(card => card.name));
   pick2Arr.push(pick2CardArr.map(card => calculateCardStats(card)));
+  pick2Arr.push(pick2CardArr.map(card => card.cost));
 
   sim.displayLeftRange.setValues(pick1Arr);
   sim.displayRightRange.setValues(pick2Arr);
@@ -58,11 +59,19 @@ function pick(side: string) {
 
   const idSet = sim.displayedIdRange.getValues();
   idSet[0][2] = side;
-
   sim.pickHistoryRange(turn).setValues(idSet);
-  sim.sideRange(turn).setValue(side);
-  sim.turnRange.setValue(turn + 1);
 
+  const dc =
+    side == "L"
+      ? sim.displayLeftRange.getValues()
+      : sim.displayRightRange.getValues(); //dc := displayedCard
+  const deckArr = [
+    [dc[4][0], dc[3][0], dc[2][0], dc[4][1], dc[3][1], dc[2][1]]
+  ];
+  sim.pickDeckRange(turn).setValues(deckArr);
+  deckSort();
+
+  sim.turnRange.setValue(turn + 1);
   displayCard();
   return true;
 }
@@ -75,6 +84,22 @@ function pickRight() {
   pick("R");
 }
 
+function deckSort() {
+  const evenDeck = sim.allEvenPickDeckRange.getValues();
+  const oddDeck = sim.allOddPickDeckRange.getValues();
+  const deck = oddDeck.concat(evenDeck);
+  const t = ["Spell", "Amulet"];
+  const phi = [""];
+  deck.sort((a, b) => (a[2] >= b[2] ? 1 : -1)); //名前順
+  deck.sort((a, b) => t.indexOf(a[1]) - t.indexOf(b[1])); //Follwer→Spell→Amulet
+  deck.sort((a, b) => a[0] - b[0]); //コスト順
+  deck.sort((a, b) => phi.indexOf(a[2]) - phi.indexOf(b[2])); //空白を下に
+  const sortedEvenDeck = deck.filter((_, index) => index % 2 == 0);
+  const sortedOddDeck = deck.filter((_, index) => index % 2 == 1);
+  sim.allEvenPickDeckRange.setValues(sortedEvenDeck);
+  sim.allOddPickDeckRange.setValues(sortedOddDeck);
+}
+
 function reset() {
   const select = Browser.msgBox(
     "本当にリセットしてよろしいですか？",
@@ -82,7 +107,7 @@ function reset() {
   );
   if (select == "ok") {
     sim.allHistoryRange.clearContent();
-    sim.allSideRange.clearContent();
+    sim.allPickDeckRange.clearContent();
     sim.turnRange.setValue(1);
     const leader = sim.leaderRange.getValue();
     if (leader == "") {
