@@ -1,8 +1,8 @@
 import { PickSetWithSide } from "../model/PickSetWithSide";
+import { convertPickSetWithSideFromArr } from "../model/PickSetWithSide"
 import { Card } from "../model/Card";
-import { convertIdToSv64 } from "./convertIdToSv64";
 import { Leader } from "../model/Leader";
-import { convertPickSetWithSideFromArr } from "./convertPickSetWithSideFromArr";
+import { convertIdToSv64 } from "./convertIdToSv64";
 
 export function getPortalUrl(
   cardList: Card[],

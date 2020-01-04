@@ -7,12 +7,15 @@ import { getCardData } from "./db/getCardData";
 import { getOrderData } from "./db/getOrderData";
 import { getProbData } from "./db/getProbData";
 import { sim } from "./simulator-sheet/simulator-sheet";
+import { convertPickSetWithSideFromArr } from "./model/PickSetWithSide";
+import { convertPickSetWithSideToIdList } from "./service/convertPickSetWithSideToIdList";
+import { getCardById } from "./service/getCardById";
 
 function displayCard() {
-  const turn = parseInt(sim.turnRange.getValue());
+  const turn = parseInt(sim.turnRange().getValue());
   if (turn > 15) return false;
 
-  const leader = sim.leaderRange.getValue();
+  const leader = sim.leaderRange().getValue();
   const cardData = getCardData();
   const orderData = getOrderData();
   const probData = getProbData();
@@ -48,30 +51,30 @@ function displayCard() {
   pick2Arr.push(pick2CardArr.map(card => calculateCardStats(card)));
   pick2Arr.push(pick2CardArr.map(card => card.cost));
 
-  sim.displayLeftRange.setValues(pick1Arr);
-  sim.displayRightRange.setValues(pick2Arr);
+  sim.displayLeftRange().setValues(pick1Arr);
+  sim.displayRightRange().setValues(pick2Arr);
   return true;
 }
 
 function pick(side: string) {
-  const turn = parseInt(sim.turnRange.getValue());
+  const turn = parseInt(sim.turnRange().getValue());
   if (turn > 15) return false;
 
-  const idSet = sim.displayedIdRange.getValues();
+  const idSet = sim.displayedIdRange().getValues();
   idSet[0][2] = side;
   sim.pickHistoryRange(turn).setValues(idSet);
 
   const dc =
     side == "L"
-      ? sim.displayLeftRange.getValues()
-      : sim.displayRightRange.getValues(); //dc := displayedCard
+      ? sim.displayLeftRange().getValues()
+      : sim.displayRightRange().getValues(); //dc := displayedCard
   const deckArr = [
     [dc[4][0], dc[3][0], dc[2][0], dc[4][1], dc[3][1], dc[2][1]]
   ];
   sim.pickDeckRange(turn).setValues(deckArr);
   deckSort();
 
-  sim.turnRange.setValue(turn + 1);
+  sim.turnRange().setValue(turn + 1);
   displayCard();
   return true;
 }
@@ -85,8 +88,8 @@ function pickRight() {
 }
 
 function deckSort() {
-  const evenDeck = sim.allEvenPickDeckRange.getValues();
-  const oddDeck = sim.allOddPickDeckRange.getValues();
+  const evenDeck = sim.allEvenPickDeckRange().getValues();
+  const oddDeck = sim.allOddPickDeckRange().getValues();
   const deck = oddDeck.concat(evenDeck);
   const t = ["Spell", "Amulet"];
   const phi = [""];
@@ -96,8 +99,8 @@ function deckSort() {
   deck.sort((a, b) => phi.indexOf(a[2]) - phi.indexOf(b[2])); //空白を下に
   const sortedEvenDeck = deck.filter((_, index) => index % 2 == 0);
   const sortedOddDeck = deck.filter((_, index) => index % 2 == 1);
-  sim.allEvenPickDeckRange.setValues(sortedEvenDeck);
-  sim.allOddPickDeckRange.setValues(sortedOddDeck);
+  sim.allEvenPickDeckRange().setValues(sortedEvenDeck);
+  sim.allOddPickDeckRange().setValues(sortedOddDeck);
 }
 
 function reset() {
@@ -106,10 +109,10 @@ function reset() {
     Browser.Buttons.OK_CANCEL
   );
   if (select == "ok") {
-    sim.allHistoryRange.clearContent();
-    sim.allPickDeckRange.clearContent();
-    sim.turnRange.setValue(1);
-    const leader = sim.leaderRange.getValue();
+    sim.allHistoryRange().clearContent();
+    sim.allPickDeckRange(15).clearContent();
+    sim.turnRange().setValue(1);
+    const leader = sim.leaderRange().getValue();
     if (leader == "") {
       Browser.msgBox("リーダーを入力してください.");
     } else {
@@ -117,4 +120,37 @@ function reset() {
     }
   }
   return select;
+}
+
+function back() {
+  const turn: number = sim.turnRange().getValue();
+  if (turn == 1) return false;
+
+  // デッキを全消去してから再生成する
+  sim.allPickDeckRange(turn - 1).clearContent();
+  const cardData = getCardData();
+  const cardList: Card[] = cardData.map(row => convertCardFromArray(row));
+  sim.pickHistoryRange(turn - 1).clearContent();
+  const historyData = sim.allHistoryRange().getValues();
+  const pickSetWithSides = convertPickSetWithSideFromArr(cardList, historyData);
+  const idList: string[] = convertPickSetWithSideToIdList(pickSetWithSides);
+
+  const deck = [];
+  idList.forEach((id, index) => {
+    const card = getCardById(id, cardList);
+    if (index % 2 == 0) {
+      deck.push([card.cost, calculateCardStats(card), card.name]);
+    } else {
+      deck[Math.floor(index / 2)].push(
+        card.cost,
+        calculateCardStats(card),
+        card.name
+      );
+    }
+  });
+
+  sim.allPickDeckRange(turn - 2).setValues(deck);
+  sim.turnRange().setValue(turn - 1);
+  deckSort();
+  displayCard();
 }
